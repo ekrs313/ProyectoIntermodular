@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('title', 'Ranking de restaurantes — Matched Foods')
+
 @section('content')
 <div class="w-full max-w-md md:max-w-2xl min-h-[85vh] flex flex-col items-center animate-[fadeIn_0.5s_ease-out] pb-10 px-4 md:px-0">
 
@@ -10,9 +12,9 @@
         </div>
     </header>
 
-    <div id="rankingContainer" class="w-full space-y-4 md:space-y-6">
-        <div class="flex flex-col items-center justify-center py-10 opacity-50 animate-pulse">
-            <span class="text-4xl md:text-5xl mb-3">📊</span>
+    <div id="rankingContainer" class="w-full space-y-4 md:space-y-6" aria-live="polite" aria-label="Clasificación de restaurantes más votados">
+        <div class="flex flex-col items-center justify-center py-10 opacity-50 animate-pulse" role="status">
+            <span class="text-4xl md:text-5xl mb-3" aria-hidden="true">📊</span>
             <p class="text-sm md:text-base font-medium uppercase tracking-widest text-gray-400">Calculando votos...</p>
         </div>
     </div>
@@ -30,8 +32,7 @@
 <script>
     const roomId = localStorage.getItem('roomId');
     const isHost = localStorage.getItem('isHost') === 'true';
-    const GOOGLE_MAPS_API_KEY = "AIzaSyBHwHUHHmKx0RWD_S5oEXIEzTCg2-u_nL8";
-    
+
     // Seguridad: Si no hay sala, al index
     if (!roomId) {
         window.location.replace('/');
@@ -53,55 +54,67 @@
             if (!data.success || data.ranking.length === 0) {
                 container.innerHTML = `
                     <div class="bg-[#1a1a24]/80 backdrop-blur-sm border border-gray-800 rounded-3xl p-8 md:p-12 text-center mt-6 md:mt-10 shadow-2xl">
-                        <span class="text-5xl md:text-6xl mb-4 block">🏜️</span>
+                        <span class="text-5xl md:text-6xl mb-4 block" aria-hidden="true">🏜️</span>
                         <p class="text-gray-400 text-sm md:text-base">Aún no hay ningún voto positivo registrado en esta sala.</p>
                     </div>`;
                 return;
             }
 
+            // Lista semántica para lectores de pantalla
+            const lista = document.createElement('ol');
+            lista.className = 'space-y-4 md:space-y-6 list-none';
+
             // Pintamos cada restaurante del ranking
             data.ranking.forEach((rest, index) => {
-                // Medallas para el Top 3
+                // Medallas para el Top 3 (con texto accesible)
                 let medal = '';
+                let medalLabel = `Puesto ${index + 1}`;
                 let borderClass = 'border-gray-800';
-                
-                if (index === 0) { medal = '🥇'; borderClass = 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.15)] bg-[#1a1a24]'; }
-                else if (index === 1) { medal = '🥈'; borderClass = 'border-gray-400 bg-[#1a1a24]/90'; }
-                else if (index === 2) { medal = '🥉'; borderClass = 'border-amber-700 bg-[#1a1a24]/80'; }
-                else { borderClass = 'border-gray-800 bg-[#1a1a24]/60'; } // Los que no están en el podio son más oscuros
 
-                const photoUrl = rest.photo_reference 
-                    ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${rest.photo_reference}&key=${GOOGLE_MAPS_API_KEY}`
+                if (index === 0) { medal = '🥇'; medalLabel = 'Primer puesto'; borderClass = 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.15)] bg-[#1a1a24]'; }
+                else if (index === 1) { medal = '🥈'; medalLabel = 'Segundo puesto'; borderClass = 'border-gray-400 bg-[#1a1a24]/90'; }
+                else if (index === 2) { medal = '🥉'; medalLabel = 'Tercer puesto'; borderClass = 'border-amber-700 bg-[#1a1a24]/80'; }
+                else { borderClass = 'border-gray-800 bg-[#1a1a24]/60'; }
+
+                // La foto se pide a NUESTRO backend, que es quien tiene la API key.
+                const photoUrl = rest.photo_reference
+                    ? `/api/photo/${encodeURIComponent(rest.photo_reference)}`
                     : 'https://via.placeholder.com/400x400/1a1a24/ffffff?text=Sin+Foto';
 
-                // Generamos el enlace OFICIAL para Google Maps
-                const mapsQuery = encodeURIComponent(`${rest.restaurant_name} ${rest.restaurant_address}`);
+                // Enlace OFICIAL para Google Maps
+                const mapsQuery = encodeURIComponent(`${rest.restaurant_name} ${rest.restaurant_address || ''}`);
                 const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
-                
-                container.innerHTML += `
+
+                const item = document.createElement('li');
+                item.innerHTML = `
                     <div class="rounded-2xl md:rounded-3xl p-3 md:p-5 border ${borderClass} flex items-center gap-3 md:gap-6 transform transition-all hover:scale-[1.02] backdrop-blur-md">
-                        
+
                         <div class="w-16 h-16 md:w-24 md:h-24 bg-gray-800 rounded-xl md:rounded-2xl flex-shrink-0 overflow-hidden relative shadow-inner">
-                            <img src="${photoUrl}" class="w-full h-full object-cover">
-                            ${medal ? `<div class="absolute -top-2 -left-2 text-2xl md:text-4xl drop-shadow-md">${medal}</div>` : ''}
+                            <img src="${photoUrl}" alt="Foto de ${rest.restaurant_name}" loading="lazy" decoding="async" class="w-full h-full object-cover">
+                            ${medal ? `<div class="absolute -top-2 -left-2 text-2xl md:text-4xl drop-shadow-md" aria-hidden="true">${medal}</div>` : ''}
+                            <span class="sr-only">${medalLabel}</span>
                         </div>
-                        
+
                         <div class="flex-grow min-w-0 flex flex-col justify-center">
-                            <h3 class="text-base md:text-xl font-black text-white truncate leading-tight">${rest.restaurant_name}</h3>
+                            <h2 class="text-base md:text-xl font-black text-white truncate leading-tight">${rest.restaurant_name}</h2>
                             <p class="text-[10px] md:text-sm text-gray-400 truncate mb-1 md:mb-2">${rest.restaurant_address || 'Sin dirección'}</p>
-                            <a href="${googleMapsUrl}" target="_blank" class="inline-block text-[10px] md:text-xs text-cyan-400 uppercase font-bold hover:text-cyan-300 w-max bg-cyan-400/10 px-2 py-1 rounded md:px-3 md:py-1.5 transition-colors">
-                                📍 Ver en mapa
+                            <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" class="inline-block text-[10px] md:text-xs text-cyan-400 uppercase font-bold hover:text-cyan-300 w-max bg-cyan-400/10 px-2 py-1 rounded md:px-3 md:py-1.5 transition-colors">
+                                📍 Ver en mapa <span class="sr-only">(se abre en una pestaña nueva)</span>
                             </a>
                         </div>
 
                         <div class="flex flex-col items-center justify-center flex-shrink-0 bg-[#0d0d15] w-12 h-12 md:w-16 md:h-16 rounded-full border border-gray-700 shadow-inner">
                             <span class="text-lg md:text-2xl font-black text-emerald-400 leading-none mt-1">${rest.total_votes}</span>
                             <span class="text-[8px] md:text-[10px] uppercase text-gray-500 font-bold">Votos</span>
+                            <span class="sr-only">${rest.total_votes} votos a favor</span>
                         </div>
 
                     </div>
                 `;
+                lista.appendChild(item);
             });
+
+            container.appendChild(lista);
 
         } catch (error) {
             document.getElementById('rankingContainer').innerHTML = '<p class="text-pink-500 mt-10 text-center font-bold">Error al conectar con el servidor.</p>';

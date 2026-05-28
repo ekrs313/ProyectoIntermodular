@@ -1,25 +1,27 @@
 @extends('layouts.app')
 
+@section('title', '¡Match! Habéis elegido restaurante — Matched Foods')
+
 @section('content')
 <div class="relative z-10 text-center max-w-md w-full px-4 md:px-0 animate-[fadeIn_0.5s_ease-out]">
-    
+
     <div class="animate-bounce mb-4 md:mb-6">
         <h1 class="text-5xl md:text-6xl font-black italic tracking-tighter text-white drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]">¡BINGO!</h1>
         <p class="text-lg md:text-xl text-gray-300 font-bold tracking-widest uppercase mt-2">¡Tenemos un Match!</p>
     </div>
 
     <div class="bg-[#1a1a24]/90 backdrop-blur-md p-5 md:p-8 rounded-3xl border-2 border-[#39ff14]/50 shadow-[0_0_50px_rgba(57,255,20,0.2)] mt-6 transform transition-all hover:scale-105">
-        
+
         <div class="w-full h-40 md:h-52 bg-gray-800 rounded-xl overflow-hidden relative mb-4 md:mb-6 shadow-inner">
-            <img id="winnerImage" src="" alt="Restaurante Ganador" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-gradient-to-t from-[#1a1a24] via-transparent to-transparent"></div>
+            <img id="winnerImage" src="" alt="" decoding="async" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-gradient-to-t from-[#1a1a24] via-transparent to-transparent" aria-hidden="true"></div>
         </div>
-        
+
         <h2 id="winnerName" class="text-2xl md:text-3xl font-black text-white mb-2 leading-tight">Cargando...</h2>
         <p id="winnerAddress" class="text-gray-400 text-xs md:text-sm mb-6 md:mb-8 px-2">Ubicación...</p>
 
-        <a id="btnMaps" href="#" target="_blank" class="block w-full py-4 md:py-5 bg-gradient-to-r from-[#39ff14] to-emerald-500 hover:from-emerald-400 hover:to-green-500 text-[#0d0d15] font-black text-base md:text-lg rounded-xl transition-all shadow-[0_0_20px_rgba(57,255,20,0.4)] hover:shadow-[0_0_30px_rgba(57,255,20,0.6)] uppercase tracking-widest active:scale-95">
-            📍 Cómo llegar
+        <a id="btnMaps" href="#" target="_blank" rel="noopener noreferrer" class="block w-full py-4 md:py-5 bg-gradient-to-r from-[#39ff14] to-emerald-500 hover:from-emerald-400 hover:to-green-500 text-[#0d0d15] font-black text-base md:text-lg rounded-xl transition-all shadow-[0_0_20px_rgba(57,255,20,0.4)] hover:shadow-[0_0_30px_rgba(57,255,20,0.6)] uppercase tracking-widest active:scale-95">
+            📍 Cómo llegar <span class="sr-only">(se abre en Google Maps en una pestaña nueva)</span>
         </a>
     </div>
 
@@ -28,46 +30,52 @@
     </button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
 @endsection
 
 @push('scripts')
 <script>
     window.addEventListener('DOMContentLoaded', () => {
-        
+
         // Recuperar el restaurante ganador de la sesión
         const winnerData = localStorage.getItem('winnerRestaurant');
-        
+
         // Si no hay ganador guardado (alguien entró directo a la URL), lo echamos al inicio
         if (!winnerData) {
             window.location.replace('/');
             return;
         }
 
-        // 1. ¡Disparar confeti! (Solo si hay un ganador real)
-        confetti({
-            particleCount: 150,
-            spread: 80,
-            origin: { y: 0.6 },
-            colors: ['#39ff14', '#22d3ee', '#ec4899']
-        });
-        
+        // 1. ¡Disparar confeti! (solo si la librería cargó y el usuario no pide menos movimiento)
+        const prefiereMenosMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (typeof confetti === 'function' && !prefiereMenosMovimiento) {
+            confetti({
+                particleCount: 150,
+                spread: 80,
+                origin: { y: 0.6 },
+                colors: ['#39ff14', '#22d3ee', '#ec4899']
+            });
+        }
+
         const restaurant = JSON.parse(winnerData);
-        
+
         document.getElementById('winnerName').innerText = restaurant.name;
         document.getElementById('winnerAddress').innerText = restaurant.address || 'Sin dirección';
-        
+
+        const img = document.getElementById('winnerImage');
+        img.alt = `Foto del restaurante ganador: ${restaurant.name}`;
         if (restaurant.photo_reference) {
             // La foto se pide a NUESTRO backend, que es quien tiene la API key.
-            document.getElementById('winnerImage').src = `/api/photo/${encodeURIComponent(restaurant.photo_reference)}`;
+            img.src = `/api/photo/${encodeURIComponent(restaurant.photo_reference)}`;
         } else {
-            document.getElementById('winnerImage').src = 'https://via.placeholder.com/800x400/1a1a24/ffffff?text=Sin+Imagen';
+            img.src = 'https://via.placeholder.com/800x400/1a1a24/ffffff?text=Sin+Imagen';
+            img.alt = `${restaurant.name} (sin imagen disponible)`;
         }
 
         // Crear enlace OFICIAL para abrir en la app de Google Maps o en la web
         const query = encodeURIComponent(`${restaurant.name} ${restaurant.address || ''}`);
         document.getElementById('btnMaps').href = `https://www.google.com/maps/search/?api=1&query=${query}`;
-        
+
     });
 
     function volverAlInicio() {

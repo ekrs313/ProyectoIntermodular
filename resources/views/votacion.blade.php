@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('title', 'Votando restaurantes — Matched Foods')
+
 @section('content')
 <div class="w-full max-w-md md:max-w-lg h-[85vh] md:h-[90vh] flex flex-col justify-between items-center relative animate-[fadeIn_0.5s_ease-out] mx-auto px-2 md:px-0">
 
@@ -20,34 +22,34 @@
     </div>
 
     <div class="relative w-full h-[60vh] md:h-[65vh] flex items-center justify-center mt-2 md:mt-4 perspective-1000">
-        
-        <div id="loadingState" class="absolute flex flex-col items-center justify-center w-full h-full z-10 transition-all duration-300">
-            <div class="w-14 h-14 md:w-16 md:h-16 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(34,211,238,0.2)]"></div>
+
+        <div id="loadingState" class="absolute flex flex-col items-center justify-center w-full h-full z-10 transition-all duration-300" role="status">
+            <div class="w-14 h-14 md:w-16 md:h-16 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(34,211,238,0.2)]" aria-hidden="true"></div>
             <p class="text-sm md:text-base text-gray-400 font-medium animate-pulse tracking-wide" id="loadingText">Preparando el menú...</p>
         </div>
 
-        <div id="waitingState" class="absolute flex flex-col items-center justify-center w-[95%] md:w-full h-full z-10 hidden bg-[#0d0d15]/95 backdrop-blur-md rounded-[2rem] border border-gray-800 shadow-2xl transition-all duration-300">
-            <span class="text-5xl md:text-6xl mb-4 animate-bounce">⏱️</span>
-            <h3 class="text-xl md:text-2xl font-black tracking-wide text-white mb-2">¡Voto registrado!</h3>
+        <div id="waitingState" class="absolute flex flex-col items-center justify-center w-[95%] md:w-full h-full z-10 hidden bg-[#0d0d15]/95 backdrop-blur-md rounded-[2rem] border border-gray-800 shadow-2xl transition-all duration-300" role="status">
+            <span class="text-5xl md:text-6xl mb-4 animate-bounce" aria-hidden="true">⏱️</span>
+            <h2 class="text-xl md:text-2xl font-black tracking-wide text-white mb-2">¡Voto registrado!</h2>
             <p class="text-gray-400 text-xs md:text-sm text-center px-6">Esperando a que el resto del grupo decida...</p>
         </div>
 
         <div id="restaurantCard" class="absolute w-[95%] md:w-full h-full bg-[#1a1a24] rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-gray-700 overflow-hidden hidden z-20 transform transition-transform duration-300 cursor-grab active:cursor-grabbing touch-none select-none">
-            
+
             <div class="w-full h-[65%] bg-gray-800 relative shadow-inner">
-                <div class="absolute inset-0 bg-gradient-to-t from-[#1a1a24] via-transparent to-black/20 z-10 pointer-events-none"></div>
-                <img id="restImage" src="" alt="Restaurante" class="w-full h-full object-cover pointer-events-none">
-                
-                <div id="stampLike" class="absolute top-8 left-6 md:top-12 md:left-8 border-4 md:border-[5px] border-emerald-500 text-emerald-500 font-black text-3xl md:text-5xl px-4 py-2 rounded-xl transform -rotate-12 opacity-0 z-20 transition-opacity uppercase tracking-widest bg-black/40 backdrop-blur-sm pointer-events-none">¡SÍ!</div>
-                <div id="stampNope" class="absolute top-8 right-6 md:top-12 md:right-8 border-4 md:border-[5px] border-pink-500 text-pink-500 font-black text-3xl md:text-5xl px-4 py-2 rounded-xl transform rotate-12 opacity-0 z-20 transition-opacity uppercase tracking-widest bg-black/40 backdrop-blur-sm pointer-events-none">NO</div>
+                <div class="absolute inset-0 bg-gradient-to-t from-[#1a1a24] via-transparent to-black/20 z-10 pointer-events-none" aria-hidden="true"></div>
+                <img id="restImage" src="" alt="" decoding="async" class="w-full h-full object-cover pointer-events-none">
+
+                <div id="stampLike" class="absolute top-8 left-6 md:top-12 md:left-8 border-4 md:border-[5px] border-emerald-500 text-emerald-500 font-black text-3xl md:text-5xl px-4 py-2 rounded-xl transform -rotate-12 opacity-0 z-20 transition-opacity uppercase tracking-widest bg-black/40 backdrop-blur-sm pointer-events-none" aria-hidden="true">¡SÍ!</div>
+                <div id="stampNope" class="absolute top-8 right-6 md:top-12 md:right-8 border-4 md:border-[5px] border-pink-500 text-pink-500 font-black text-3xl md:text-5xl px-4 py-2 rounded-xl transform rotate-12 opacity-0 z-20 transition-opacity uppercase tracking-widest bg-black/40 backdrop-blur-sm pointer-events-none" aria-hidden="true">NO</div>
             </div>
-            
+
             <div class="w-full h-[35%] p-5 md:p-6 flex flex-col justify-end relative z-20 bg-[#1a1a24]">
                 <div class="flex justify-between items-end mb-2 gap-2">
                     <h2 id="restName" class="text-2xl md:text-3xl font-black leading-tight truncate text-white shadow-black drop-shadow-md">--</h2>
                     <div class="flex items-center bg-yellow-500/20 px-3 py-1.5 rounded-full border border-yellow-500/30 flex-shrink-0">
-                        <span class="text-yellow-400 text-xs md:text-sm font-bold mr-1">★</span>
-                        <span id="restRating" class="text-yellow-400 font-black text-xs md:text-sm">--</span>
+                        <span class="text-yellow-400 text-xs md:text-sm font-bold mr-1" aria-hidden="true">★</span>
+                        <span id="restRating" class="text-yellow-400 font-black text-xs md:text-sm" aria-label="Valoración">--</span>
                     </div>
                 </div>
                 <p id="restAddress" class="text-gray-400 text-xs md:text-sm truncate">--</p>
@@ -57,11 +59,11 @@
     </div>
 
     <div id="actionButtons" class="w-full flex justify-center gap-10 md:gap-14 mb-8 md:mb-10 z-20 hidden opacity-0 transition-opacity duration-500">
-        <button onclick="handleVote(false)" class="w-16 h-16 md:w-20 md:h-20 bg-[#1a1a24] rounded-full flex items-center justify-center border-2 border-pink-500/50 text-pink-500 text-3xl md:text-4xl hover:bg-pink-500 hover:text-white transition-all transform hover:scale-110 shadow-[0_0_20px_rgba(236,72,153,0.2)] hover:shadow-[0_0_30px_rgba(236,72,153,0.4)] active:scale-95">
-            ✕
+        <button onclick="handleVote(false)" aria-label="No me gusta este restaurante" class="w-16 h-16 md:w-20 md:h-20 bg-[#1a1a24] rounded-full flex items-center justify-center border-2 border-pink-500/50 text-pink-500 text-3xl md:text-4xl hover:bg-pink-500 hover:text-white transition-all transform hover:scale-110 shadow-[0_0_20px_rgba(236,72,153,0.2)] hover:shadow-[0_0_30px_rgba(236,72,153,0.4)] active:scale-95">
+            <span aria-hidden="true">✕</span>
         </button>
-        <button onclick="handleVote(true)" class="w-16 h-16 md:w-20 md:h-20 bg-[#1a1a24] rounded-full flex items-center justify-center border-2 border-emerald-500/50 text-emerald-500 text-3xl md:text-4xl hover:bg-emerald-500 hover:text-white transition-all transform hover:scale-110 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] active:scale-95">
-            ♥
+        <button onclick="handleVote(true)" aria-label="Me gusta este restaurante" class="w-16 h-16 md:w-20 md:h-20 bg-[#1a1a24] rounded-full flex items-center justify-center border-2 border-emerald-500/50 text-emerald-500 text-3xl md:text-4xl hover:bg-emerald-500 hover:text-white transition-all transform hover:scale-110 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] active:scale-95">
+            <span aria-hidden="true">♥</span>
         </button>
     </div>
 
@@ -90,13 +92,13 @@
     document.getElementById('playerNameDisplay').innerText = userName;
 
     window.addEventListener('DOMContentLoaded', () => {
-        
+
         // ==========================================
         // 1. ESCUCHAR LOS EVENTOS DEL JUEGO (ECHO)
         // ==========================================
         if (window.Echo) {
             window.Echo.channel(`room.${roomId}`)
-                
+
                 // EVENTO: NUEVA RONDA (Nuevo restaurante)
                 // El servidor manda el número de ronda real, así no dependemos
                 // de un contador local que se puede desincronizar.
@@ -105,7 +107,7 @@
                     roundNumber = e.roundNumber;
                     mostrarRestaurante(currentRestaurant, roundNumber);
                 })
-                
+
                 // EVENTO: ¡MATCH ENCONTRADO!
                 .listen('.match.found', (e) => {
                     localStorage.setItem('winnerRestaurant', JSON.stringify(e.restaurant));
@@ -145,7 +147,7 @@
         // 1. Efectos visuales de salida
         animarSalidaTarjeta(isLike);
         document.getElementById('actionButtons').classList.replace('opacity-100', 'opacity-0');
-        
+
         setTimeout(() => {
             document.getElementById('restaurantCard').classList.add('hidden');
             document.getElementById('actionButtons').classList.add('hidden');
@@ -181,30 +183,34 @@
     // --- LÓGICA DE INTERFAZ Y ANIMACIONES ---
     function mostrarRestaurante(restaurant, round) {
         document.getElementById('roundDisplay').innerText = `Ronda ${round}`;
-        
+
         document.getElementById('restName').innerText = restaurant.name;
         document.getElementById('restAddress').innerText = restaurant.address || 'Sin dirección';
         document.getElementById('restRating').innerText = restaurant.rating;
-        
+
+        const img = document.getElementById('restImage');
+        // alt descriptivo para lectores de pantalla
+        img.alt = `Foto del restaurante ${restaurant.name}`;
         if (restaurant.photo_reference) {
             // La foto se pide a NUESTRO backend, que es quien tiene la API key.
-            document.getElementById('restImage').src = `/api/photo/${encodeURIComponent(restaurant.photo_reference)}`;
+            img.src = `/api/photo/${encodeURIComponent(restaurant.photo_reference)}`;
         } else {
-            document.getElementById('restImage').src = 'https://via.placeholder.com/800x600/1a1a24/ffffff?text=Sin+Imagen';
+            img.src = 'https://via.placeholder.com/800x600/1a1a24/ffffff?text=Sin+Imagen';
+            img.alt = `${restaurant.name} (sin imagen disponible)`;
         }
 
         const card = document.getElementById('restaurantCard');
         card.style.transform = '';
         card.className = "absolute w-[95%] md:w-full h-full bg-[#1a1a24] rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-gray-700 overflow-hidden z-20 cursor-grab active:cursor-grabbing touch-none select-none";
-        
+
         document.getElementById('stampLike').style.opacity = '0';
         document.getElementById('stampNope').style.opacity = '0';
 
         document.getElementById('loadingState').classList.add('hidden');
         document.getElementById('waitingState').classList.add('hidden');
-        
+
         card.classList.remove('hidden');
-        
+
         const buttons = document.getElementById('actionButtons');
         buttons.classList.remove('hidden');
         setTimeout(() => buttons.classList.replace('opacity-0', 'opacity-100'), 100);
@@ -213,7 +219,7 @@
     function animarSalidaTarjeta(isLike) {
         const card = document.getElementById('restaurantCard');
         card.style.transition = 'transform 0.5s ease-out, opacity 0.3s ease-out';
-        
+
         if (isLike) {
             card.style.transform = 'translateX(100vw) rotate(30deg)';
         } else {
@@ -232,7 +238,7 @@
     function dragStart(e) {
         isDragging = true;
         startX = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
-        card.style.transition = 'none'; 
+        card.style.transition = 'none';
     }
 
     window.addEventListener('touchmove', dragMove, {passive: false});
@@ -242,7 +248,7 @@
         if (!isDragging) return;
         const x = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
         currentX = x - startX;
-        
+
         const rotate = currentX * 0.05;
         card.style.transform = `translateX(${currentX}px) rotate(${rotate}deg)`;
 
