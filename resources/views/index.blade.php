@@ -6,21 +6,18 @@
 @section('content')
 <div class="text-center w-full max-w-md px-4 md:px-0 animate-[fadeIn_0.5s_ease-out]">
 
-    <header class="relative inline-block mb-6 md:mb-8 text-center">
+       <header class="relative inline-block mb-6 md:mb-8">
+
         <div class="absolute inset-0 bg-cyan-500/40 rounded-full blur-2xl md:blur-3xl animate-pulse" aria-hidden="true"></div>
-        
-        <img 
-            src="{{ asset('images/Logo.png') }}" 
-            alt="Logotipo de Matched Foods" 
-            class="relative z-10 block mx-auto w-24 md:w-36 h-auto mb-3 md:mb-4 drop-shadow-[0_0_15px_rgba(34,211,238,0.3)] transition-transform duration-300 hover:scale-105"
-            decoding="async"
-            fetchpriority="high"
-        >
 
         <h1 class="text-4xl md:text-5xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-500 relative z-10 drop-shadow-lg">
+
             MATCHED FOODS
+
         </h1>
-        <p class="text-gray-300 text-xs md:text-sm mt-1 md:mt-2 uppercase tracking-widest font-bold relative z-10">Sincroniza tu hambre</p>
+
+        <p class="text-gray-300 text-xs md:text-sm mt-1 md:mt-2 uppercase tracking-widest font-bold">Sincroniza tu hambre</p>
+
     </header>
 
     <div class="bg-[#1a1a24]/80 backdrop-blur-md p-6 md:p-8 rounded-[2rem] border border-gray-800 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
