@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\RoomController; // Importamos el controlador
+use App\Http\Controllers\RoomController; 
 use App\Http\Controllers\GameController;
 
 // Rutas de Votación y Juego

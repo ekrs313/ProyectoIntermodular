@@ -12,7 +12,7 @@ Route::get('/lobby', function () {
     return view('lobby');
 });
 
-// Ruta de Votación (El juego en sí)
+// Ruta de Votación 
 Route::get('/votacion', function () {
     return view('votacion');
 });
@@ -22,7 +22,7 @@ Route::get('/match', function () {
     return view('match');
 });
 
-// Ruta de Ranking (Para un futuro si decides implementarlo)
+// Ruta de Ranking 
 Route::get('/ranking', function () {
     return view('ranking');
 });

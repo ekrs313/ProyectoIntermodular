@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\DB; // <-- Importación necesaria para el ranking
+use Illuminate\Support\Facades\DB; 
 use App\Models\Room;
 use App\Models\Vote;
 use App\Events\NewRound;
@@ -13,7 +13,7 @@ use App\Events\MatchFound;
 class GameController extends Controller
 {
     /**
-     * Obtener el siguiente restaurante y enviarlo a todos (Solo lo llama el Host)
+     * Obtener el siguiente restaurante y enviarlo a todos 
      */
     public function nextRound(Request $request)
     {
@@ -34,7 +34,7 @@ class GameController extends Controller
         $results = $response->json()['results'] ?? [];
 
         // ==========================================
-        // 🛡️ PARCHE DE SEGURIDAD: EVITAR DIVISIÓN POR CERO
+        //  PARCHE DE SEGURIDAD: EVITAR DIVISIÓN POR CERO
         // ==========================================
         if (count($results) === 0) {
             // Si Google devuelve error o 0 resultados, bajamos la ronda para no saltarnos turnos
@@ -125,7 +125,6 @@ class GameController extends Controller
             return response()->json(['success' => false, 'message' => 'Sala no encontrada']);
         }
 
-        // Agrupamos los votos positivos por restaurante y contamos cuántos tiene cada uno
         $ranking = Vote::where('room_id', $roomId)
             ->where('is_like', true)
             ->select('restaurant_id', 'restaurant_name', 'restaurant_address', 'photo_reference', DB::raw('count(*) as total_votes'))

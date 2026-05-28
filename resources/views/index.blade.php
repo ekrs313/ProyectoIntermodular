@@ -96,14 +96,17 @@
         btn.innerText = "Creando...";
 
         try {
-            const response = await fetch(`${API_URL}/create-room`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json' // <-- AÑADIDO
-                },
-                body: JSON.stringify({ userName: nombre })
-            });
+            // ... dentro de tu fetch
+const response = await fetch(`${API_URL}/create-room`, {
+    method: 'POST',
+    headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') // <--- ESTO ES LO QUE FALTA
+    },
+    body: JSON.stringify({ userName: nombre })
+});
+// ...
             const data = await response.json();
 
             if (data.success) {
@@ -138,14 +141,17 @@
         btn.innerText = "Entrando...";
 
         try {
-            const response = await fetch(`${API_URL}/join-room`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json' // <-- AÑADIDO
-                },
-                body: JSON.stringify({ roomCode: codigo, userName: nombre })
-            });
+            c// ... dentro de tu fetch
+const response = await fetch(`${API_URL}/create-room`, {
+    method: 'POST',
+    headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') // <--- ESTO ES LO QUE FALTA
+    },
+    body: JSON.stringify({ userName: nombre })
+});
+// ...
             const data = await response.json();
 
             if (data.success) {

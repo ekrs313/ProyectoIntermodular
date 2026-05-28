@@ -108,10 +108,8 @@ class RoomController extends Controller
             return response()->json(['success' => false, 'message' => 'Sala no encontrada'], 404);
         }
 
-        // Cambiamos el estado para que nadie más pueda unirse
         $room->update(['status' => 'playing']);
 
-        // DISPARAMOS EL EVENTO PARA QUE TODOS VAYAN A VOTAR
         event(new GameStarted($room->id));
 
         return response()->json(['success' => true]);
