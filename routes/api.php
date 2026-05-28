@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoomController; 
 use App\Http\Controllers\GameController;
 
+Route::get('/room/{roomId}', [RoomController::class, 'getState']);
+Route::get('/photo/{reference}', [GameController::class, 'photo']);
 // Rutas de Votación y Juego
 Route::post('/next-round', [GameController::class, 'nextRound']);
 Route::post('/submit-vote', [GameController::class, 'submitVote']);

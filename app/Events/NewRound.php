@@ -13,13 +13,15 @@ class NewRound implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $roomId;
-    public $restaurant; // Datos del restaurante a mostrar
+    public $restaurant;
+    public $roundNumber;
 
-    public function __construct($roomId, $restaurant)
-    {
-        $this->roomId = $roomId;
-        $this->restaurant = $restaurant;
-    }
+public function __construct($roomId, $restaurant, $roundNumber)
+{
+    $this->roomId = $roomId;
+    $this->restaurant = $restaurant;
+    $this->roundNumber = $roundNumber;
+}
 
     public function broadcastOn(): array
     {

@@ -82,7 +82,6 @@
         window.location.replace('/');
     }
 
-    const GOOGLE_MAPS_API_KEY = "AIzaSyBHwHUHHmKx0RWD_S5oEXIEzTCg2-u_nL8";
     let currentRestaurant = null;
     let roundNumber = 0;
 
@@ -99,9 +98,11 @@
             window.Echo.channel(`room.${roomId}`)
                 
                 // EVENTO: NUEVA RONDA (Nuevo restaurante)
+                // El servidor manda el número de ronda real, así no dependemos
+                // de un contador local que se puede desincronizar.
                 .listen('.new.round', (e) => {
                     currentRestaurant = e.restaurant;
-                    roundNumber++;
+                    roundNumber = e.roundNumber;
                     mostrarRestaurante(currentRestaurant, roundNumber);
                 })
                 
@@ -113,7 +114,7 @@
         }
 
         // ==========================================
-        // 2. EL HOST INICIA LA PRIMERA RONDA
+        // 2. EL HOST INICIA SOLO LA PRIMERA RONDA
         // ==========================================
         if (isHost) {
             pedirSiguienteRonda();
@@ -123,6 +124,8 @@
     });
 
     // --- LÓGICA DE COMUNICACIÓN CON EL SERVIDOR ---
+    // Esto solo lo usa el host UNA vez para arrancar la partida.
+    // El avance de las siguientes rondas lo decide el servidor.
     async function pedirSiguienteRonda() {
         try {
             await fetch('/api/next-round', {
@@ -149,9 +152,12 @@
             document.getElementById('waitingState').classList.remove('hidden');
         }, 300);
 
-        // 2. Enviar voto al servidor
+        // 2. Enviar voto al servidor.
+        //    El servidor avanza la ronda y emite '.new.round' a todos
+        //    en cuanto detecta que el grupo ha votado. No hay que hacer
+        //    nada más desde aquí, da igual quién sea el host.
         try {
-            const response = await fetch('/api/submit-vote', {
+            await fetch('/api/submit-vote', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -161,14 +167,6 @@
                     isLike: isLike
                 })
             });
-            const data = await response.json();
-
-            // 3. Si no hay match, el Host pide la siguiente ronda
-            if (isHost && data.all_voted && !data.match) {
-                setTimeout(() => {
-                    pedirSiguienteRonda();
-                }, 1500); 
-            }
         } catch (error) {
             Swal.fire({
                 title: 'Error',
@@ -189,7 +187,8 @@
         document.getElementById('restRating').innerText = restaurant.rating;
         
         if (restaurant.photo_reference) {
-            document.getElementById('restImage').src = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=${restaurant.photo_reference}&key=${GOOGLE_MAPS_API_KEY}`;
+            // La foto se pide a NUESTRO backend, que es quien tiene la API key.
+            document.getElementById('restImage').src = `/api/photo/${encodeURIComponent(restaurant.photo_reference)}`;
         } else {
             document.getElementById('restImage').src = 'https://via.placeholder.com/800x600/1a1a24/ffffff?text=Sin+Imagen';
         }

@@ -85,7 +85,27 @@
     // Configuración base de SweetAlert para mantener el modo oscuro
     const swalDark = { background: '#1a1a24', color: '#fff', confirmButtonColor: '#06b6d4' };
 
-    // 4. Crear Sala
+    // Token CSRF (por si alguna ruta lo necesitara)
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    // ==========================================
+    // Pedir ubicación del navegador (con permiso del usuario).
+    // Si la deniega o falla, devolvemos null y el backend usa búsqueda genérica.
+    // ==========================================
+    function obtenerUbicacion() {
+        return new Promise((resolve) => {
+            if (!navigator.geolocation) {
+                return resolve({ lat: null, lng: null });
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                () => resolve({ lat: null, lng: null }),
+                { timeout: 8000 }
+            );
+        });
+    }
+
+    // 4. Crear Sala (Host)
     async function crearSala() {
         const nombre = document.getElementById('inputNombreHost').value.trim();
         const btn = document.getElementById('btnCreate');
@@ -93,20 +113,28 @@
         if (!nombre) return Swal.fire({ ...swalDark, title: 'Oops!', text: 'Introduce tu nombre para crear la sala', icon: 'warning' });
 
         btn.disabled = true;
+        btn.innerText = "Buscando ubicación...";
+
+        // Capturamos la ubicación del host para buscar restaurantes cercanos
+        const coords = await obtenerUbicacion();
+
         btn.innerText = "Creando...";
 
         try {
-            // ... dentro de tu fetch
-const response = await fetch(`${API_URL}/create-room`, {
-    method: 'POST',
-    headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') // <--- ESTO ES LO QUE FALTA
-    },
-    body: JSON.stringify({ userName: nombre })
-});
-// ...
+            const response = await fetch(`${API_URL}/create-room`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    userName: nombre,
+                    latitude: coords.lat,
+                    longitude: coords.lng
+                })
+            });
+
             const data = await response.json();
 
             if (data.success) {
@@ -116,7 +144,7 @@ const response = await fetch(`${API_URL}/create-room`, {
                 localStorage.setItem('isHost', 'true');
                 localStorage.setItem('userId', data.userId);
 
-                window.location.replace('/lobby'); 
+                window.location.replace('/lobby');
             } else {
                 Swal.fire({ ...swalDark, title: 'Error', text: 'Error al crear la sala', icon: 'error' });
                 btn.disabled = false;
@@ -129,7 +157,7 @@ const response = await fetch(`${API_URL}/create-room`, {
         }
     }
 
-    // 5. Unirse a Sala
+    // 5. Unirse a Sala (Guest)
     async function unirseASala() {
         const nombre = document.getElementById('inputNombreGuest').value.trim();
         const codigo = document.getElementById('inputCodigo').value.trim().toUpperCase();
@@ -141,17 +169,16 @@ const response = await fetch(`${API_URL}/create-room`, {
         btn.innerText = "Entrando...";
 
         try {
-            c// ... dentro de tu fetch
-const response = await fetch(`${API_URL}/create-room`, {
-    method: 'POST',
-    headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') // <--- ESTO ES LO QUE FALTA
-    },
-    body: JSON.stringify({ userName: nombre })
-});
-// ...
+            const response = await fetch(`${API_URL}/join-room`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({ roomCode: codigo, userName: nombre })
+            });
+
             const data = await response.json();
 
             if (data.success) {

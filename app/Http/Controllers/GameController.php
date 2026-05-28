@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\DB; 
+use Illuminate\Support\Facades\DB;
 use App\Models\Room;
 use App\Models\Vote;
 use App\Events\NewRound;
@@ -13,116 +13,158 @@ use App\Events\MatchFound;
 class GameController extends Controller
 {
     /**
-     * Obtener el siguiente restaurante y enviarlo a todos 
+     * Arranca la PRIMERA ronda (la dispara el host al entrar a votación).
      */
     public function nextRound(Request $request)
     {
+        $request->validate(['roomId' => 'required|string']);
+
         $room = Room::find($request->roomId);
-        if (!$room) return response()->json(['success' => false]);
-
-        // Aumentamos la ronda
-        $room->increment('round_number');
-
-        // 1. Conectamos con Google Maps API para buscar restaurantes
-        $apiKey = env('GOOGLE_MAPS_API_KEY');
-        $response = Http::get("https://maps.googleapis.com/maps/api/place/textsearch/json", [
-            'query' => 'restaurantes populares',
-            'key' => $apiKey,
-            'language' => 'es'
-        ]);
-
-        $results = $response->json()['results'] ?? [];
-
-        // ==========================================
-        //  PARCHE DE SEGURIDAD: EVITAR DIVISIÓN POR CERO
-        // ==========================================
-        if (count($results) === 0) {
-            // Si Google devuelve error o 0 resultados, bajamos la ronda para no saltarnos turnos
-            $room->decrement('round_number');
-            return response()->json([
-                'success' => false, 
-                'message' => 'No se encontraron restaurantes. Revisa que tu API Key de Google Maps tenga activada la "Places API".'
-            ]);
+        if (!$room) {
+            return response()->json(['success' => false, 'message' => 'Sala no encontrada'], 404);
         }
 
-        // Tomamos el restaurante correspondiente a la ronda actual
-        $index = ($room->round_number - 1) % count($results);
-        $place = $results[$index] ?? null;
-
-        if (!$place) {
-            return response()->json(['success' => false, 'message' => 'No hay más restaurantes']);
-        }
-
-        // Preparamos los datos limpios para el Frontend
-        $restaurantData = [
-            'id' => $place['place_id'],
-            'name' => $place['name'],
-            'address' => $place['formatted_address'] ?? '',
-            'photo_reference' => $place['photos'][0]['photo_reference'] ?? null,
-            'rating' => $place['rating'] ?? 'N/A',
-        ];
-
-        // Guardamos el restaurante actual en la sala
-        $room->update(['current_restaurant_id' => $restaurantData['id']]);
-
-        // 2. Disparamos el evento a los móviles
-        event(new NewRound($room->id, $restaurantData));
-
-        return response()->json(['success' => true, 'restaurant' => $restaurantData]);
+        return $this->avanzarRonda($room);
     }
 
     /**
-     * Registrar el voto de un jugador
+     * Registrar el voto de un jugador.
      */
     public function submitVote(Request $request)
     {
-        $room = Room::find($request->roomId);
-        
-        // 1. Guardamos el voto en la base de datos
-        $vote = Vote::create([
-            'room_id' => $room->id,
-            'player_id' => $request->userId,
-            'round_number' => $room->round_number,
-            'restaurant_id' => $request->restaurant['id'],
-            'restaurant_name' => $request->restaurant['name'],
-            'restaurant_address' => $request->restaurant['address'],
-            'photo_reference' => $request->restaurant['photo_reference'],
-            'is_like' => $request->isLike, // true o false
+        $request->validate([
+            'roomId'          => 'required|string',
+            'userId'          => 'required|string',
+            'restaurant.id'   => 'required|string',
+            'restaurant.name' => 'required|string',
+            'isLike'          => 'required|boolean',
         ]);
 
-        // 2. Comprobar si TODOS los jugadores han votado en esta ronda
-        $totalPlayers = $room->players()->count();
-        $votesInThisRound = $room->votes()->where('round_number', $room->round_number)->count();
-
-        if ($votesInThisRound >= $totalPlayers) {
-            // ¡Todos han votado! Vamos a ver si hay unanimidad (Match)
-            $likes = $room->votes()
-                        ->where('round_number', $room->round_number)
-                        ->where('is_like', true)
-                        ->count();
-
-            if ($likes === $totalPlayers && $totalPlayers > 0) {
-                // ¡HAY MATCH! Disparamos el evento de victoria
-                $room->update(['status' => 'finished']);
-                event(new MatchFound($room->id, $request->restaurant));
-                return response()->json(['success' => true, 'match' => true]);
-            } else {
-                // No hay match unánime. Aquí el Host (frontend) decidirá llamar a nextRound()
-                return response()->json(['success' => true, 'match' => false, 'all_voted' => true]);
-            }
+        $room = Room::find($request->roomId);
+        if (!$room) {
+            return response()->json(['success' => false, 'message' => 'Sala no encontrada'], 404);
         }
 
-        return response()->json(['success' => true, 'match' => false, 'all_voted' => false]);
+        // updateOrCreate evita el voto duplicado en la misma ronda/restaurante
+        Vote::updateOrCreate(
+            [
+                'room_id'       => $room->id,
+                'player_id'     => $request->userId,
+                'round_number'  => $room->round_number,
+                'restaurant_id' => $request->restaurant['id'],
+            ],
+            [
+                'restaurant_name'    => $request->restaurant['name'],
+                'restaurant_address' => $request->restaurant['address'] ?? null,
+                'photo_reference'    => $request->restaurant['photo_reference'] ?? null,
+                'is_like'            => $request->isLike,
+            ]
+        );
+
+        // ¿Han votado TODOS los jugadores en esta ronda? (contamos jugadores distintos)
+        $totalPlayers = $room->players()->count();
+        $votosRonda = $room->votes()
+            ->where('round_number', $room->round_number)
+            ->distinct('player_id')
+            ->count('player_id');
+
+        if ($votosRonda < $totalPlayers) {
+            return response()->json(['success' => true, 'match' => false, 'all_voted' => false]);
+        }
+
+        // Todos han votado: ¿unanimidad de "me gusta"?
+        $likes = $room->votes()
+            ->where('round_number', $room->round_number)
+            ->where('is_like', true)
+            ->distinct('player_id')
+            ->count('player_id');
+
+        if ($likes === $totalPlayers && $totalPlayers > 0) {
+            // Reconstruimos el restaurante desde el voto guardado (no desde el cliente)
+            $voto = $room->votes()
+                ->where('round_number', $room->round_number)
+                ->where('is_like', true)
+                ->first();
+
+            $ganador = [
+                'id'              => $voto->restaurant_id,
+                'name'            => $voto->restaurant_name,
+                'address'         => $voto->restaurant_address,
+                'photo_reference' => $voto->photo_reference,
+            ];
+
+            $room->update(['status' => 'finished']);
+            event(new MatchFound($room->id, $ganador));
+
+            return response()->json(['success' => true, 'match' => true]);
+        }
+
+        // No hay match: EL SERVIDOR avanza la ronda solo, sin depender de quién sea host
+        $this->avanzarRonda($room);
+
+        return response()->json(['success' => true, 'match' => false, 'all_voted' => true]);
     }
 
     /**
-     * Obtener el Ranking de votos de la sala
+     * Busca el siguiente restaurante y lo emite por WebSocket.
      */
+    private function avanzarRonda(Room $room)
+{
+    $room->increment('round_number');
+
+    $apiKey = config('services.google_maps.key');
+
+    if ($room->latitude && $room->longitude) {
+        // Búsqueda por cercanía a la ubicación del host
+        $response = Http::get('https://maps.googleapis.com/maps/api/place/nearbysearch/json', [
+            'location' => $room->latitude . ',' . $room->longitude,
+            'radius'   => 1500, // metros
+            'type'     => 'restaurant',
+            'key'      => $apiKey,
+            'language' => 'es',
+        ]);
+    } else {
+        // Fallback genérico si el host no compartió ubicación
+        $response = Http::get('https://maps.googleapis.com/maps/api/place/textsearch/json', [
+            'query'    => 'restaurantes populares',
+            'key'      => $apiKey,
+            'language' => 'es',
+        ]);
+    }
+
+    $results = $response->json()['results'] ?? [];
+
+    if (count($results) === 0) {
+        $room->decrement('round_number');
+        return response()->json([
+            'success' => false,
+            'message' => 'No se encontraron restaurantes cerca. Revisa la Places API de tu clave de Google.',
+        ]);
+    }
+
+    $index = ($room->round_number - 1) % count($results);
+    $place = $results[$index];
+
+    $restaurantData = [
+        'id'              => $place['place_id'],
+        'name'            => $place['name'],
+        // Nearby Search usa 'vicinity'; Text Search usa 'formatted_address'
+        'address'         => $place['vicinity'] ?? $place['formatted_address'] ?? '',
+        'photo_reference' => $place['photos'][0]['photo_reference'] ?? null,
+        'rating'          => $place['rating'] ?? 'N/A',
+    ];
+
+    $room->update(['current_restaurant_id' => $restaurantData['id']]);
+
+    event(new NewRound($room->id, $restaurantData, $room->round_number));
+
+    return response()->json(['success' => true, 'restaurant' => $restaurantData]);
+}
     public function getRanking($roomId)
     {
         $room = Room::find($roomId);
         if (!$room) {
-            return response()->json(['success' => false, 'message' => 'Sala no encontrada']);
+            return response()->json(['success' => false, 'message' => 'Sala no encontrada'], 404);
         }
 
         $ranking = Vote::where('room_id', $roomId)
@@ -134,4 +176,25 @@ class GameController extends Controller
 
         return response()->json(['success' => true, 'ranking' => $ranking]);
     }
+    /**
+ * Proxy de fotos de Google Places: el cliente NUNCA ve la API key.
+ * El front pide /api/photo/{reference} y el backend trae la imagen.
+ */
+public function photo(string $reference)
+{
+    $response = Http::get('https://maps.googleapis.com/maps/api/place/photo', [
+        'maxwidth'       => 800,
+        'photoreference' => $reference,
+        'key'            => config('services.google_maps.key'),
+    ]);
+
+    if (!$response->successful()) {
+        abort(404);
+    }
+
+    return response($response->body(), 200)
+        ->header('Content-Type', $response->header('Content-Type') ?: 'image/jpeg')
+        ->header('Cache-Control', 'public, max-age=86400'); // cachea 1 día
+}
+
 }

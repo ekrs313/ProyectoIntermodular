@@ -10,14 +10,15 @@ class Room extends Model
     use HasUuids;
 
     // Campos que se pueden rellenar de forma masiva
-    protected $fillable = [
-        'code',
-        'status',
-        'round_number',
-        'current_restaurant_id',
-        'timer_ends_at',
-    ];
-
+   protected $fillable = [
+    'code',
+    'status',
+    'round_number',
+    'current_restaurant_id',
+    'timer_ends_at',
+    'latitude',
+    'longitude',
+];
     // Indica a Laravel que trate 'timer_ends_at' como un objeto Carbon (Fecha/Hora)
     protected $casts = [
         'timer_ends_at' => 'datetime',

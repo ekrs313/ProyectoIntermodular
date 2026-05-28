@@ -15,44 +15,39 @@ class RoomController extends Controller
      * CREAR SALA (Para el Host)
      */
     public function createRoom(Request $request)
-    {
-        // Validamos que nos llegue el nombre
-        $request->validate([
-            'userName' => 'required|string|max:255',
-        ]);
+{
+    $request->validate([
+        'userName'  => 'required|string|max:255',
+        'latitude'  => 'nullable|numeric|between:-90,90',
+        'longitude' => 'nullable|numeric|between:-180,180',
+    ]);
 
-        // 1. Generar un código único de 4 letras
-        do {
-            $code = strtoupper(Str::random(4));
-        } while (Room::where('code', $code)->exists());
+    do {
+        $code = strtoupper(Str::random(4));
+    } while (Room::where('code', $code)->exists());
 
-        // 2. Crear la sala en estado 'waiting' (esperando jugadores)
-        $room = Room::create([
-            'code' => $code,
-            'status' => 'waiting',
-            'round_number' => 0,
-        ]);
+    $room = Room::create([
+        'code'         => $code,
+        'status'       => 'waiting',
+        'round_number' => 0,
+        'latitude'     => $request->latitude,
+        'longitude'    => $request->longitude,
+    ]);
 
-        // 3. Registrar al creador como 'Host'
-        $player = Player::create([
-            'room_id' => $room->id,
-            'name' => $request->userName,
-            'is_host' => true,
-        ]);
+    $player = Player::create([
+        'room_id' => $room->id,
+        'name'    => $request->userName,
+        'is_host' => true,
+    ]);
 
-        // 4. Devolver los datos al Frontend en formato JSON
-        return response()->json([
-            'success' => true,
-            'roomCode' => $room->code,
-            'roomId' => $room->id,
-            'userId' => $player->id,
-            'isHost' => true,
-        ]);
-    }
-
-    /**
-     * UNIRSE A SALA (Para los Guests/Invitados)
-     */
+    return response()->json([
+        'success'  => true,
+        'roomCode' => $room->code,
+        'roomId'   => $room->id,
+        'userId'   => $player->id,
+        'isHost'   => true,
+    ]);
+}
     public function joinRoom(Request $request)
     {
         // Validamos que nos llegue código y nombre
@@ -114,4 +109,27 @@ class RoomController extends Controller
 
         return response()->json(['success' => true]);
     }
+    /**
+ * Devuelve el estado actual de la sala y sus jugadores.
+ * El lobby lo usa como fuente de verdad al cargar y tras cada 'player.joined'.
+ */
+public function getState(string $roomId)
+{
+    $room = Room::find($roomId);
+
+    if (!$room) {
+        return response()->json(['success' => false, 'message' => 'Sala no encontrada'], 404);
+    }
+
+    $players = $room->players()
+        ->orderByDesc('is_host')   // el host primero
+        ->orderBy('created_at')    // luego por orden de llegada
+        ->get(['name', 'is_host']);
+
+    return response()->json([
+        'success' => true,
+        'status'  => $room->status,
+        'players' => $players,
+    ]);
+}
 }

@@ -33,8 +33,6 @@
 
 @push('scripts')
 <script>
-    const GOOGLE_MAPS_API_KEY = "AIzaSyBHwHUHHmKx0RWD_S5oEXIEzTCg2-u_nL8";
-    
     window.addEventListener('DOMContentLoaded', () => {
         
         // Recuperar el restaurante ganador de la sesión
@@ -60,7 +58,8 @@
         document.getElementById('winnerAddress').innerText = restaurant.address || 'Sin dirección';
         
         if (restaurant.photo_reference) {
-            document.getElementById('winnerImage').src = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=${restaurant.photo_reference}&key=${GOOGLE_MAPS_API_KEY}`;
+            // La foto se pide a NUESTRO backend, que es quien tiene la API key.
+            document.getElementById('winnerImage').src = `/api/photo/${encodeURIComponent(restaurant.photo_reference)}`;
         } else {
             document.getElementById('winnerImage').src = 'https://via.placeholder.com/800x400/1a1a24/ffffff?text=Sin+Imagen';
         }

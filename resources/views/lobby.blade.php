@@ -68,22 +68,17 @@
     const isHost = localStorage.getItem('isHost') === 'true';
     const userId = localStorage.getItem('userId');
 
-    // VARIABLE GLOBAL: Lista de jugadores actuales
-    let jugadoresEnSala = []; 
-
     // Verificación de seguridad: si no hay sesión, al index.
     if (!roomCode || !roomId || !userName) {
         window.location.replace('/');
     } else {
-        // Solo ejecutamos esto si hay sesión válida
-        jugadoresEnSala = [userName];
-
         window.addEventListener('DOMContentLoaded', () => {
             // 1. Mostrar la vista correcta
             if (isHost) {
                 document.getElementById('hostView').classList.remove('hidden');
                 document.getElementById('hostCodeDisplay').innerText = roomCode;
-                actualizarListaDePrueba(jugadoresEnSala); 
+                // Pedimos la lista REAL al servidor (no nos fiamos solo de los eventos)
+                cargarJugadores();
             } else {
                 document.getElementById('guestView').classList.remove('hidden');
                 document.getElementById('guestNameDisplay').innerText = userName;
@@ -91,31 +86,59 @@
             }
 
             // ==========================================
-            // 2. MAGIA DE LARAVEL ECHO (WEBSOCKETS)
+            // 2. WEBSOCKETS (LARAVEL ECHO)
             // ==========================================
             if (window.Echo) {
                 window.Echo.channel(`room.${roomId}`)
-                    .listen('.player.joined', (e) => {
-                        // Solo el Host necesita actualizar la pantalla gigante
+                    .listen('.player.joined', () => {
+                        // Cuando entra alguien, volvemos a pedir la lista completa al
+                        // servidor. Así da igual el orden de conexión o si el host recargó.
                         if (isHost) {
-                            jugadoresEnSala.push(e.playerName);
-                            actualizarListaDePrueba(jugadoresEnSala);
+                            cargarJugadores();
                         }
                     })
-                    .listen('.game.started', (e) => {
-                        // Redirige a todos (Host y Guests) al mismo tiempo a la votación
+                    .listen('.game.started', () => {
+                        // Redirige a todos (Host y Guests) a la votación
                         window.location.href = '/votacion';
                     });
             }
         });
     }
 
-    function actualizarListaDePrueba(listaDeNombres) {
+    // ==========================================
+    // FUENTE DE VERDAD: la lista viene del servidor
+    // ==========================================
+    async function cargarJugadores() {
+        try {
+            const response = await fetch(`/api/room/${roomId}`);
+            const data = await response.json();
+
+            if (!data.success) return;
+
+            // Si por lo que sea la partida ya empezó, mandamos al host a votar también
+            if (data.status === 'playing') {
+                window.location.href = '/votacion';
+                return;
+            }
+
+            const nombres = data.players.map(p => p.name);
+            renderJugadores(nombres);
+        } catch (error) {
+            console.error('No se pudo cargar la lista de jugadores', error);
+        }
+    }
+
+    function renderJugadores(listaDeNombres) {
         const grid = document.getElementById('playersGrid');
         const counter = document.getElementById('playerCount');
         
         grid.innerHTML = '';
         counter.innerText = listaDeNombres.length;
+
+        if (listaDeNombres.length === 0) {
+            grid.innerHTML = '<div class="text-gray-600 font-medium italic animate-pulse text-sm md:text-base">Esperando a que se unan tus amigos...</div>';
+            return;
+        }
 
         listaDeNombres.forEach((name, index) => {
             const playerCard = document.createElement('div');
@@ -127,8 +150,7 @@
             ];
             const chosenColor = colors[index % colors.length];
 
-            // Ajustado el padding y tamaño de texto para móviles (px-4 py-2 md:px-6 md:py-3)
-            playerCard.className = `bg-gradient-to-br ${chosenColor} px-4 py-2 md:px-6 md:py-3 rounded-2xl font-black text-sm md:text-lg tracking-wide text-white shadow-lg animate-[pop_0.3s_cubic-bezier(0.175,0.885,0.32,1.275)_filled] transform hover:scale-105 transition-all`;
+            playerCard.className = `bg-gradient-to-br ${chosenColor} px-4 py-2 md:px-6 md:py-3 rounded-2xl font-black text-sm md:text-lg tracking-wide text-white shadow-lg animate-[pop_0.3s_cubic-bezier(0.175,0.885,0.32,1.275)] transform hover:scale-105 transition-all`;
             playerCard.innerText = name;
             grid.appendChild(playerCard);
         });
@@ -154,7 +176,7 @@
     }
 
     // ==========================================
-    // LÓGICA PARA INICIAR PARTIDA
+    // INICIAR PARTIDA
     // ==========================================
     async function iniciarPartida() {
         try {
