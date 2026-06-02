@@ -62,5 +62,8 @@
         @yield('content')
     </main>
 
+    {{-- AQUÍ van los scripts de cada vista (@push('scripts')). Sin esto, nada de JS funciona. --}}
+    @stack('scripts')
+
 </body>
 </html>
