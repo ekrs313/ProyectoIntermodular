@@ -21,6 +21,15 @@ class Vote extends Model
     ];
 
     /**
+     * Conversión de tipos.
+     * is_like se trata como booleano real para que las comparaciones en PHP
+     * sean fiables (MySQL lo devuelve como 0/1 y "0" es truthy en PHP).
+     */
+    protected $casts = [
+        'is_like' => 'boolean',
+    ];
+
+    /**
      * Relación: El voto pertenece a una sala.
      */
     public function room()

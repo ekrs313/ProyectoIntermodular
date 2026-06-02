@@ -6,18 +6,11 @@
 @section('content')
 <div class="text-center w-full max-w-md px-4 md:px-0 animate-[fadeIn_0.5s_ease-out]">
 
-       <header class="relative inline-block mb-6 md:mb-8">
-
-        <div class="absolute inset-0 bg-cyan-500/40 rounded-full blur-2xl md:blur-3xl animate-pulse" aria-hidden="true"></div>
-
-        <h1 class="text-4xl md:text-5xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-500 relative z-10 drop-shadow-lg">
-
-            MATCHED FOODS
-
-        </h1>
-
+    <header class="mb-6 md:mb-8">
+        {{-- El h1 con el texto se mantiene oculto para SEO y lectores de pantalla; visualmente se muestra el logo --}}
+        <h1 class="sr-only">Matched Foods</h1>
+        <img src="{{ asset('images/logo.png') }}" alt="Matched Foods" class="w-56 md:w-72 mx-auto drop-shadow-[0_0_25px_rgba(34,211,238,0.35)]">
         <p class="text-gray-300 text-xs md:text-sm mt-1 md:mt-2 uppercase tracking-widest font-bold">Sincroniza tu hambre</p>
-
     </header>
 
     <div class="bg-[#1a1a24]/80 backdrop-blur-md p-6 md:p-8 rounded-[2rem] border border-gray-800 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
@@ -70,12 +63,10 @@
 <script>
     const API_URL = '/api';
 
-    // 1. Limpieza de seguridad al cargar la página (Borrar partidas antiguas)
     window.addEventListener('DOMContentLoaded', () => {
         localStorage.clear();
     });
 
-    // 2. Función para que el botón "Enter" del teclado funcione
     function checkEnter(e, type) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -84,7 +75,6 @@
         }
     }
 
-    // 3. Cambio de Pestañas (actualiza también el estado accesible aria-selected)
     function switchTab(tab) {
         const guestTab = document.getElementById('btnTabGuest');
         const hostTab = document.getElementById('btnTabHost');
@@ -112,16 +102,10 @@
         }
     }
 
-    // Configuración base de SweetAlert para mantener el modo oscuro
     const swalDark = { background: '#1a1a24', color: '#fff', confirmButtonColor: '#06b6d4' };
 
-    // Token CSRF (por si alguna ruta lo necesitara)
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-    // ==========================================
-    // Pedir ubicación del navegador (con permiso del usuario).
-    // Si la deniega o falla, devolvemos null y el backend usa búsqueda genérica.
-    // ==========================================
     function obtenerUbicacion() {
         return new Promise((resolve) => {
             if (!navigator.geolocation) {
@@ -135,7 +119,6 @@
         });
     }
 
-    // 4. Crear Sala (Host)
     async function crearSala() {
         const nombre = document.getElementById('inputNombreHost').value.trim();
         const btn = document.getElementById('btnCreate');
@@ -145,7 +128,6 @@
         btn.disabled = true;
         btn.innerText = "Buscando ubicación...";
 
-        // Capturamos la ubicación del host para buscar restaurantes cercanos
         const coords = await obtenerUbicacion();
 
         btn.innerText = "Creando...";
@@ -187,7 +169,6 @@
         }
     }
 
-    // 5. Unirse a Sala (Guest)
     async function unirseASala() {
         const nombre = document.getElementById('inputNombreGuest').value.trim();
         const codigo = document.getElementById('inputCodigo').value.trim().toUpperCase();
