@@ -33,7 +33,6 @@
     const roomId = localStorage.getItem('roomId');
     const isHost = localStorage.getItem('isHost') === 'true';
 
-    // Seguridad: Si no hay sala, al index
     if (!roomId) {
         window.location.replace('/');
     }
@@ -48,9 +47,8 @@
             const data = await response.json();
 
             const container = document.getElementById('rankingContainer');
-            container.innerHTML = ''; // Limpiamos el loader
+            container.innerHTML = '';
 
-            // ESTADO VACÍO (Si nadie ha votado)
             if (!data.success || data.ranking.length === 0) {
                 container.innerHTML = `
                     <div class="bg-[#1a1a24]/80 backdrop-blur-sm border border-gray-800 rounded-3xl p-8 md:p-12 text-center mt-6 md:mt-10 shadow-2xl">
@@ -60,34 +58,32 @@
                 return;
             }
 
-            // Lista semántica para lectores de pantalla
             const lista = document.createElement('ol');
             lista.className = 'space-y-4 md:space-y-6 list-none';
 
-            // Pintamos cada restaurante del ranking
             data.ranking.forEach((rest, index) => {
-                // Medallas para el Top 3 (con texto accesible)
+                // Color de borde por ESTILO DIRECTO (oro/plata/bronce) para que
+                // siempre se vea, aunque el CDN de Tailwind no genere la clase.
                 let medal = '';
                 let medalLabel = `Puesto ${index + 1}`;
-                let borderClass = 'border-gray-800';
+                let borderColor = '#1f2937'; // gris por defecto
+                let cardShadow = '0 4px 14px rgba(0,0,0,0.3)';
 
-                if (index === 0) { medal = '🥇'; medalLabel = 'Primer puesto'; borderClass = 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.15)] bg-[#1a1a24]'; }
-                else if (index === 1) { medal = '🥈'; medalLabel = 'Segundo puesto'; borderClass = 'border-gray-400 bg-[#1a1a24]/90'; }
-                else if (index === 2) { medal = '🥉'; medalLabel = 'Tercer puesto'; borderClass = 'border-amber-700 bg-[#1a1a24]/80'; }
-                else { borderClass = 'border-gray-800 bg-[#1a1a24]/60'; }
+                if (index === 0) { medal = '🥇'; medalLabel = 'Primer puesto'; borderColor = '#facc15'; cardShadow = '0 0 30px rgba(250,204,21,0.18)'; }
+                else if (index === 1) { medal = '🥈'; medalLabel = 'Segundo puesto'; borderColor = '#9ca3af'; }
+                else if (index === 2) { medal = '🥉'; medalLabel = 'Tercer puesto'; borderColor = '#b45309'; }
 
-                // La foto se pide a NUESTRO backend, que es quien tiene la API key.
                 const photoUrl = rest.photo_reference
                     ? `/api/photo/${encodeURIComponent(rest.photo_reference)}`
                     : 'https://via.placeholder.com/400x400/1a1a24/ffffff?text=Sin+Foto';
 
-                // Enlace OFICIAL para Google Maps
                 const mapsQuery = encodeURIComponent(`${rest.restaurant_name} ${rest.restaurant_address || ''}`);
                 const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
 
                 const item = document.createElement('li');
                 item.innerHTML = `
-                    <div class="rounded-2xl md:rounded-3xl p-3 md:p-5 border ${borderClass} flex items-center gap-3 md:gap-6 transform transition-all hover:scale-[1.02] backdrop-blur-md">
+                    <div style="border: 1px solid ${borderColor}; box-shadow: ${cardShadow}; background: rgba(26,26,36,0.85);"
+                         class="rounded-2xl md:rounded-3xl p-3 md:p-5 flex items-center gap-3 md:gap-6 transition-transform transform hover:scale-[1.02] backdrop-blur-md">
 
                         <div class="w-16 h-16 md:w-24 md:h-24 bg-gray-800 rounded-xl md:rounded-2xl flex-shrink-0 overflow-hidden relative shadow-inner">
                             <img src="${photoUrl}" alt="Foto de ${rest.restaurant_name}" loading="lazy" decoding="async" class="w-full h-full object-cover">

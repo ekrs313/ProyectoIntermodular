@@ -32,11 +32,14 @@
 
         {{-- Lista en vivo: se anuncia a lectores de pantalla cuando entra alguien --}}
         <div class="w-full max-w-2xl bg-[#161622]/50 border border-gray-800/80 backdrop-blur-sm rounded-3xl p-4 md:p-8 min-h-[150px] md:min-h-[250px] flex flex-wrap justify-center items-center gap-3 md:gap-4 shadow-2xl" id="playersGrid" aria-live="polite" aria-label="Jugadores en la sala">
-            <div class="text-gray-600 font-medium italic animate-pulse text-sm md:text-base">Esperando a que se unan tus amigos...</div>
+            <div class="text-gray-600 font-medium italic text-sm md:text-base">Esperando a que se unan tus amigos...</div>
         </div>
 
         <div class="w-full max-w-sm pt-2 md:pt-4">
-            <button onclick="iniciarPartida()" class="w-full py-4 md:py-5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-[#0d0d15] font-black text-lg md:text-xl rounded-2xl transition-all transform hover:scale-[1.03] active:scale-[0.97] uppercase tracking-widest shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+            {{-- Color del botón por estilo directo: así siempre se ve, no depende del escaneo de Tailwind --}}
+            <button onclick="iniciarPartida()"
+                style="background: linear-gradient(to right, #10b981, #0d9488); color: #0d0d15; box-shadow: 0 0 30px rgba(16,185,129,0.35);"
+                class="w-full py-4 md:py-5 font-black text-lg md:text-xl rounded-2xl transition-transform transform hover:scale-[1.03] active:scale-[0.97] uppercase tracking-widest">
                 ¡Empezar Juego!
             </button>
         </div>
@@ -66,23 +69,19 @@
 
 @push('scripts')
 <script>
-    // Recuperamos datos antes de ejecutar nada
     const roomCode = localStorage.getItem('roomCode');
     const roomId = localStorage.getItem('roomId');
     const userName = localStorage.getItem('userName');
     const isHost = localStorage.getItem('isHost') === 'true';
     const userId = localStorage.getItem('userId');
 
-    // Verificación de seguridad: si no hay sesión, al index.
     if (!roomCode || !roomId || !userName) {
         window.location.replace('/');
     } else {
         window.addEventListener('DOMContentLoaded', () => {
-            // 1. Mostrar la vista correcta
             if (isHost) {
                 document.getElementById('hostView').classList.remove('hidden');
                 document.getElementById('hostCodeDisplay').innerText = roomCode;
-                // Pedimos la lista REAL al servidor (no nos fiamos solo de los eventos)
                 cargarJugadores();
             } else {
                 document.getElementById('guestView').classList.remove('hidden');
@@ -90,29 +89,20 @@
                 document.getElementById('guestCodeDisplay').innerText = roomCode;
             }
 
-            // ==========================================
-            // 2. WEBSOCKETS (LARAVEL ECHO)
-            // ==========================================
             if (window.Echo) {
                 window.Echo.channel(`room.${roomId}`)
                     .listen('.player.joined', () => {
-                        // Cuando entra alguien, volvemos a pedir la lista completa al
-                        // servidor. Así da igual el orden de conexión o si el host recargó.
                         if (isHost) {
                             cargarJugadores();
                         }
                     })
                     .listen('.game.started', () => {
-                        // Redirige a todos (Host y Guests) a la votación
                         window.location.href = '/votacion';
                     });
             }
         });
     }
 
-    // ==========================================
-    // FUENTE DE VERDAD: la lista viene del servidor
-    // ==========================================
     async function cargarJugadores() {
         try {
             const response = await fetch(`/api/room/${roomId}`);
@@ -120,7 +110,6 @@
 
             if (!data.success) return;
 
-            // Si por lo que sea la partida ya empezó, mandamos al host a votar también
             if (data.status === 'playing') {
                 window.location.href = '/votacion';
                 return;
@@ -141,21 +130,25 @@
         counter.innerText = listaDeNombres.length;
 
         if (listaDeNombres.length === 0) {
-            grid.innerHTML = '<div class="text-gray-600 font-medium italic animate-pulse text-sm md:text-base">Esperando a que se unan tus amigos...</div>';
+            grid.innerHTML = '<div class="text-gray-600 font-medium italic text-sm md:text-base">Esperando a que se unan tus amigos...</div>';
             return;
         }
 
+        // Colores aplicados por ESTILO DIRECTO (no clases de Tailwind), para que
+        // siempre se vean aunque el CDN no haya generado esas clases dinámicas.
+        const gradientes = [
+            'linear-gradient(135deg, #ec4899, #9333ea)', // rosa -> morado
+            'linear-gradient(135deg, #06b6d4, #2563eb)', // cian -> azul
+            'linear-gradient(135deg, #f59e0b, #ea580c)', // ámbar -> naranja
+            'linear-gradient(135deg, #10b981, #0d9488)'  // esmeralda -> teal
+        ];
+
         listaDeNombres.forEach((name, index) => {
             const playerCard = document.createElement('div');
-            const colors = [
-                'from-pink-500 to-purple-600 shadow-pink-500/20',
-                'from-cyan-500 to-blue-600 shadow-cyan-500/20',
-                'from-amber-500 to-orange-600 shadow-amber-500/20',
-                'from-emerald-500 to-teal-600 shadow-emerald-500/20'
-            ];
-            const chosenColor = colors[index % colors.length];
-
-            playerCard.className = `bg-gradient-to-br ${chosenColor} px-4 py-2 md:px-6 md:py-3 rounded-2xl font-black text-sm md:text-lg tracking-wide text-white shadow-lg animate-[pop_0.3s_cubic-bezier(0.175,0.885,0.32,1.275)] transform hover:scale-105 transition-all`;
+            playerCard.className = 'px-5 py-2.5 md:px-7 md:py-3 rounded-2xl font-black text-sm md:text-lg tracking-wide text-white transition-transform transform hover:scale-105';
+            playerCard.style.background = gradientes[index % gradientes.length];
+            playerCard.style.boxShadow = '0 4px 14px rgba(0,0,0,0.35)';
+            playerCard.style.animation = 'pop 0.3s cubic-bezier(0.175,0.885,0.32,1.275)';
             playerCard.innerText = name;
             grid.appendChild(playerCard);
         });
@@ -180,9 +173,6 @@
         window.location.replace('/');
     }
 
-    // ==========================================
-    // INICIAR PARTIDA
-    // ==========================================
     async function iniciarPartida() {
         try {
             const response = await fetch('/api/start-game', {
@@ -196,7 +186,6 @@
             if (!data.success) {
                 Swal.fire('Error', data.message || 'No se pudo iniciar la partida', 'error');
             }
-            // Si funciona, Echo escucha .game.started y redirige a todos.
         } catch (error) {
             Swal.fire('Error', 'Error de conexión al iniciar la partida', 'error');
         }
