@@ -72,14 +72,12 @@
 
 @push('scripts')
 <script>
-    // Recuperar datos de sesión
     const roomCode = localStorage.getItem('roomCode');
     const roomId = localStorage.getItem('roomId');
     const userName = localStorage.getItem('userName');
     const isHost = localStorage.getItem('isHost') === 'true';
     const userId = localStorage.getItem('userId');
 
-    // Seguridad: Si alguien entra a la URL sin sala, lo expulsamos limpio
     if (!roomId || !userName) {
         window.location.replace('/');
     }
@@ -87,37 +85,24 @@
     let currentRestaurant = null;
     let roundNumber = 0;
 
-    // Pintar info inicial
     document.getElementById('roomCodeDisplay').innerText = roomCode;
     document.getElementById('playerNameDisplay').innerText = userName;
 
     window.addEventListener('DOMContentLoaded', () => {
 
-        // ==========================================
-        // 1. ESCUCHAR LOS EVENTOS DEL JUEGO (ECHO)
-        // ==========================================
         if (window.Echo) {
             window.Echo.channel(`room.${roomId}`)
-
-                // EVENTO: NUEVA RONDA (Nuevo restaurante)
-                // El servidor manda el número de ronda real, así no dependemos
-                // de un contador local que se puede desincronizar.
                 .listen('.new.round', (e) => {
                     currentRestaurant = e.restaurant;
                     roundNumber = e.roundNumber;
                     mostrarRestaurante(currentRestaurant, roundNumber);
                 })
-
-                // EVENTO: ¡MATCH ENCONTRADO!
                 .listen('.match.found', (e) => {
                     localStorage.setItem('winnerRestaurant', JSON.stringify(e.restaurant));
                     window.location.replace('/match');
                 });
         }
 
-        // ==========================================
-        // 2. EL HOST INICIA SOLO LA PRIMERA RONDA
-        // ==========================================
         if (isHost) {
             pedirSiguienteRonda();
         } else {
@@ -125,9 +110,6 @@
         }
     });
 
-    // --- LÓGICA DE COMUNICACIÓN CON EL SERVIDOR ---
-    // Esto solo lo usa el host UNA vez para arrancar la partida.
-    // El avance de las siguientes rondas lo decide el servidor.
     async function pedirSiguienteRonda() {
         try {
             await fetch('/api/next-round', {
@@ -141,10 +123,8 @@
     }
 
     async function handleVote(isLike) {
-        // Bloquear doble click
         if (document.getElementById('restaurantCard').classList.contains('hidden')) return;
 
-        // 1. Efectos visuales de salida
         animarSalidaTarjeta(isLike);
         document.getElementById('actionButtons').classList.replace('opacity-100', 'opacity-0');
 
@@ -154,10 +134,6 @@
             document.getElementById('waitingState').classList.remove('hidden');
         }, 300);
 
-        // 2. Enviar voto al servidor.
-        //    El servidor avanza la ronda y emite '.new.round' a todos
-        //    en cuanto detecta que el grupo ha votado. No hay que hacer
-        //    nada más desde aquí, da igual quién sea el host.
         try {
             await fetch('/api/submit-vote', {
                 method: 'POST',
@@ -180,7 +156,6 @@
         }
     }
 
-    // --- LÓGICA DE INTERFAZ Y ANIMACIONES ---
     function mostrarRestaurante(restaurant, round) {
         document.getElementById('roundDisplay').innerText = `Ronda ${round}`;
 
@@ -189,10 +164,8 @@
         document.getElementById('restRating').innerText = restaurant.rating;
 
         const img = document.getElementById('restImage');
-        // alt descriptivo para lectores de pantalla
         img.alt = `Foto del restaurante ${restaurant.name}`;
         if (restaurant.photo_reference) {
-            // La foto se pide a NUESTRO backend, que es quien tiene la API key.
             img.src = `/api/photo/${encodeURIComponent(restaurant.photo_reference)}`;
         } else {
             img.src = 'https://via.placeholder.com/800x600/1a1a24/ffffff?text=Sin+Imagen';
@@ -200,7 +173,13 @@
         }
 
         const card = document.getElementById('restaurantCard');
-        card.style.transform = '';
+
+        // --- RESETEO COMPLETO de la tarjeta ---
+        // La animación de salida dejó la tarjeta desplazada y con opacity 0.
+        // Hay que restaurar TODO o la siguiente ronda no se ve (este era el bug).
+        card.style.transition = 'none';          // sin transición para el reseteo instantáneo
+        card.style.transform = 'translateX(0px) rotate(0deg)';
+        card.style.opacity = '1';                 // <-- lo que faltaba: volver a hacerla visible
         card.className = "absolute w-[95%] md:w-full h-full bg-[#1a1a24] rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-gray-700 overflow-hidden z-20 cursor-grab active:cursor-grabbing touch-none select-none";
 
         document.getElementById('stampLike').style.opacity = '0';
